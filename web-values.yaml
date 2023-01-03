@@ -1,0 +1,41 @@
+image:
+  name: avgard
+  tag: latest
+env:
+  APP_ENV: development
+deployments:
+  web:
+    image:
+      name: avgard 
+      tag: latest
+    command:
+      - sh
+      - -c
+      - yarn start:apps:dev
+    services:
+      web1:
+        labels:
+          service.label: web1-service
+        annotations:
+          service.annotation: web1 service annotation
+        port: 3000
+        targetPort: 3000
+        protocol: TCP
+      web2:
+        labels:
+          service.label: web1-service
+        annotations:
+          service.annotation: web1 service annotation
+        port: 3002
+        targetPort: 3002
+        protocol: TCP
+    volumes:
+      code:
+        type: hostPath
+        mountPath: /code
+        hostPath: avgard/code
+        hostPathType: Directory
+
+
+  
+

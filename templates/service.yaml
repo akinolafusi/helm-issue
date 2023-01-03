@@ -1,0 +1,24 @@
+{{- range $deployName, $deployConfig := $.Values.deployments -}}
+{{- $services := coalesce (($deployConfig).services) dict }}
+{{- range $serviceName, $serviceConfig := $services  -}}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- range $key, $value := $serviceConfig.labels }}
+    {{ $key }}: {{ $value }}
+    {{- end }}
+  name: {{ $deployName }}-service
+spec: 
+  ports:
+  - name: {{ $serviceName }}
+    port: {{ $serviceConfig.port }}
+    targetPort: {{ $serviceConfig.targetPort  }}
+    protocol: {{ $serviceConfig.protocol  }}
+  selector:
+    avagard.service: {{ $.Release.Name }}-{{ $deployName }}
+{{- end -}}
+{{- end -}}
+
+
+

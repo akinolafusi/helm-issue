@@ -1,0 +1,82 @@
+{{- range $deployName, $deployConfig := $.Values.deployments -}}
+{{- $imageConfig := coalesce (($deployConfig).image) $.Values.image -}}
+{{- $deployAnnotations := coalesce (($deployConfig).deployAnnotations) dict }}
+{{- $podAnnotations := coalesce (($deployConfig).podAnnotations) dict }}
+{{- $labels := coalesce (($deployConfig).labels) dict }}
+{{- $command := coalesce (($deployConfig).command) list }}
+{{- $env := coalesce (($deployConfig).env) dict }}
+{{- $services := coalesce (($deployConfig).services) dict }}
+{{- $volumes := coalesce (($deployConfig).volumes) dict }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    {{- range $key, $value := $deployAnnotations }}
+    {{ $key }}: {{ $value }}
+    {{- end }}
+  labels:
+    {{- range $key, $value := $labels }}
+    {{ $key }}: {{ $value }}
+    {{- end }}
+    avgard.service: {{ $.Release.Name }}-{{ $deployName }}  # why do we have this here?
+  name: {{ $deployName }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      avgard.service: {{ $.Release.Name }}-{{ $deployName }}
+  template:
+    metadata:
+      annotations:
+        {{- range $key, $value := $.Values.annotations }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+        {{- range $key, $value := $podAnnotations }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+      labels:
+        {{- range $key, $value := $labels }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+        avgard.service: {{ $.Release.Name }}-{{ $deployName }}
+    spec:
+      containers:
+        - command:
+            {{- range $command }}
+            - {{ . }}
+            {{- end }}
+          imagePullPolicy: IfNotPresent
+          env:
+            {{- range $key, $value := $.Values.env }}
+            - name: {{ $key | quote }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := $env }}
+            - name: {{ $key | quote }}
+              value: {{ $value | quote }}
+            {{- end }}
+          image: {{ $imageConfig.name }}:{{ $imageConfig.tag }}
+          name: {{ $deployName }}
+          ports:
+          {{- range $serviceName, $serviceConfig := $services }}
+            - name: {{ $serviceName }}
+              containerPort: {{ $serviceConfig.targetPort }}
+          {{- end }}
+          volumeMounts:
+          {{- range $volumeName, $volumeConfig := $volumes }}
+            - name: {{ $volumeName }}
+              {{- if eq $volumeConfig.type "hostPath" }}
+              mountPath: {{ $volumeConfig.mountPath }}
+              {{- end }} 
+          {{- end }}
+      volumes:
+      {{- range $volumeName, $volumeConfig := $volumes }}
+        - name: {{ $volumeName }}
+        {{- if eq $volumeConfig.type "hostPath" }}
+          hostPath:
+            path: {{ $volumeConfig.hostPath }}
+            type: {{ $volumeConfig.hostPathType }}
+        {{- end }} 
+      {{- end }}
+---
+{{- end }}
